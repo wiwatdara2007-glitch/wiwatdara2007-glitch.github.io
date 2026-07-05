@@ -1,1 +1,0 @@
-# wiwatdara2007-glitch.github.io
