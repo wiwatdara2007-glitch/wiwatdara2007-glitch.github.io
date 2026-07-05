@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการเงินห้องเรียน</title>
+    <!-- นำเข้า Tailwind CSS เพื่อความสวยงาม -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Sarabun', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <!-- ส่วนหัวข้อและกล่อง Login -->
+        <header class="flex flex-col md:flex-row justify-between items-center border-b border-slate-200 pb-6 mb-8 gap-4">
+            <div class="text-center md:text-left">
+                <h1 class="text-3xl font-bold text-slate-800">💰 ระบบจัดการเงินกองกลางของห้อง</h1>
+                <p class="text-slate-500 mt-1">บันทึกรายรับ ตรวจสอบรายจ่าย และสรุปยอดคงเหลือ (ข้อมูลไม่หายเมื่อปิดเว็บ)</p>
+            </div>
+            
+            <!-- โซน Login / สถานะ -->
+            <div id="loginSection" class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-wrap items-center gap-2">
+                <div id="loginForm" class="flex flex-wrap items-center gap-2">
+                    <input type="text" id="usernameInput" placeholder="Username" class="border border-slate-300 rounded-lg p-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 w-28">
+                    <input type="password" id="passwordInput" placeholder="Password" class="border border-slate-300 rounded-lg p-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 w-28">
+                    <button onclick="handleLogin()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition cursor-pointer">🔑 เข้าสู่ระบบ</button>
+                </div>
+                <div id="adminStatus" class="hidden flex items-center gap-3">
+                    <span class="bg-emerald-100 text-emerald-800 text-xs font-semibold px-2.5 py-1 rounded-full">🟢 โหมดผู้ดูแลระบบ</span>
+                    <button onclick="handleLogout()" class="text-xs text-rose-600 hover:text-rose-800 font-medium underline cursor-pointer">ออกจากระบบ</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- การ์ดสรุปยอดเงิน -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-emerald-50 border-l-4 border-emerald-500 p-5 rounded-r-xl shadow-xs">
+                <p class="text-sm text-emerald-600 font-medium">ยอดรวมที่เก็บได้ (จ่ายแล้ว)</p>
+                <p class="text-3xl font-bold text-emerald-700 mt-1"><span id="totalIncome">0</span> บาท</p>
+            </div>
+            <div class="bg-rose-50 border-l-4 border-rose-500 p-5 rounded-r-xl shadow-xs">
+                <p class="text-sm text-rose-600 font-medium">ยอดใช้จ่ายทั้งหมด</p>
+                <p class="text-3xl font-bold text-rose-700 mt-1"><span id="totalExpense">0</span> บาท</p>
+            </div>
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-5 rounded-r-xl shadow-xs">
+                <p class="text-sm text-blue-600 font-medium">ยอดเงินคงเหลือ</p>
+                <p class="text-3xl font-bold text-blue-700 mt-1"><span id="balance">0</span> บาท</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- ฝั่งซ้าย: ตารางรายชื่อนักศึกษาและการเก็บเงิน -->
+            <div class="lg:col-span-2 space-y-6">
+                
+                <!-- โซนจัดการสิทธิ์ผู้ดูแลระบบ -->
+                <div id="adminActionsZone" class="hidden space-y-6">
+                    <!-- ส่วนบันทึกและรวมยอดเงินสะสม -->
+                    <div class="bg-white p-6 rounded-2xl shadow-xs border border-slate-100">
+                        <h2 class="text-lg font-semibold text-slate-800 mb-4">📥 บันทึก / รวมยอดเงินสะสม</h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm text-slate-600 mb-1">รหัสนักศึกษา</label>
+                                <input type="text" id="studentIdInput" value="69041083" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-slate-600 mb-1">จำนวนเงินที่จะบวกเพิ่ม (บาท)</label>
+                                <input type="number" id="studentAmountInput" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="flex items-end">
+                                <button onclick="addOrUpdateStudentMoney()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium p-2 rounded-lg text-sm transition shadow-xs cursor-pointer">
+                                    🔄 อัปเดต/รวมยอดเงิน
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ส่วนเพิ่มรายชื่อนักศึกษาใหม่ -->
+                    <div class="bg-white p-6 rounded-2xl shadow-xs border border-slate-100">
+                        <h2 class="text-lg font-semibold text-slate-800 mb-4">👤 เพิ่มรายชื่อนักศึกษาใหม่</h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm text-slate-600 mb-1">รหัสนักศึกษา</label>
+                                <input type="text" id="newStudentId" value="69041083" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-slate-600 mb-1">ชื่อ-นามสกุล</label>
+                                <input type="text" id="newStudentName" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="flex items-end">
+                                <button onclick="addNewStudent()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium p-2 rounded-lg text-sm transition shadow-xs cursor-pointer">
+                                    ➕ เพิ่มรายชื่อเข้าห้อง
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ตารางรายชื่อ -->
+                <div class="bg-white p-6 rounded-2xl shadow-xs border border-slate-100 overflow-hidden">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                        <h2 class="text-lg font-semibold text-slate-800">📋 รายชื่อและสถานะการจ่ายเงิน</h2>
+                        
+                        <!-- ยอดเงินที่กำหนดไว้/คน และจำกัดสิทธิ์แก้ไขเฉพาะผู้ดูแลระบบ -->
+                        <div class="flex items-center space-x-2 bg-slate-100 p-2 rounded-xl border border-slate-200">
+                            <label for="targetAmountInput" class="text-xs font-medium text-slate-600 whitespace-nowrap">🎯 ยอดเงินที่กำหนดไว้/คน:</label>
+                            <!-- แก้ไข: ผูกฟังก์ชัน saveTargetAmount() เมื่อมีการกรอกข้อมูล -->
+                            <input type="number" id="targetAmountInput" oninput="saveTargetAmount()" disabled class="w-20 bg-slate-200 text-slate-500 border border-slate-300 rounded-md p-1 text-xs text-center font-bold focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-70">
+                            <span class="text-xs text-slate-500">บาท</span>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-200 text-slate-500 text-sm">
+                                    <th class="pb-3 font-medium">รหัสนักศึกษา</th>
+                                    <th class="pb-3 font-medium">ชื่อ-นามสกุล</th>
+                                    <th class="pb-3 font-medium text-right">จำนวนเงิน</th>
+                                    <th class="pb-3 font-medium text-center">สถานะ</th>
+                                    <th class="pb-3 font-medium text-center admin-element hidden">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
+                                <!-- ข้อมูลจะถูกใส่ด้วย JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ฝั่งขวา: ข้อมูลการใช้เงิน (รายจ่าย) -->
+            <div class="space-y-6">
+                <!-- ฟอร์มบันทึกรายจ่าย (เฉพาะ Admin) -->
+                <div id="expenseFormZone" class="bg-white p-6 rounded-2xl shadow-xs border border-slate-100 hidden">
+                    <h2 class="text-lg font-semibold text-slate-800 mb-4">📤 บันทึกการใช้เงิน (รายจ่าย)</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm text-slate-600 mb-1">รายละเอียดการใช้เงิน</label>
+                            <input type="text" id="expenseDescInput" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-600 mb-1">จำนวนเงินที่ใช้ (บาท)</label>
+                            <input type="number" id="expenseAmountInput" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                        </div>
+                        <button onclick="addExpense()" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-medium p-2 rounded-lg text-sm transition shadow-xs cursor-pointer">
+                            เพิ่มรายการรายจ่าย
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ตารางแสดงรายจ่าย -->
+                <div class="bg-white p-6 rounded-2xl shadow-xs border border-slate-100">
+                    <h2 class="text-lg font-semibold text-slate-800 mb-4">💸 ประวัติการใช้เงินห้อง</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-200 text-slate-500 text-sm">
+                                    <th class="pb-3 font-medium">รายละเอียด</th>
+                                    <th class="pb-3 font-medium text-right">จำนวนเงิน</th>
+                                    <th class="pb-3 font-medium text-center admin-element hidden">ลบ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expenseTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
+                                <!-- ข้อมูลจะถูกใส่ด้วย JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ส่วนควบคุมการทำงาน (JavaScript) -->
+    <script>
+        let isAdmin = false;
+
+        // ข้อมูลจำลองเริ่มต้น
+        const defaultStudents = [
+            { id: "6601004", name: "นางสาวนีรชา มานะ", amount: 200, paid: false },
+            { id: "6601002", name: "สมหญิง รักเรียน", amount: 200, paid: true },
+            { id: "6601001", name: "สมชาย ใจดี", amount: 200, paid: true },
+            { id: "6601003", name: "นายกิตติ เก่งกล้า", amount: 0, paid: false }
+        ];
+        const defaultExpenses = [
+            { desc: "ซื้อไม้กวาดและแปรงลบกระดาน", amount: 120 }
+        ];
+
+        let students = JSON.parse(localStorage.getItem("roomMoneyStudents")) || defaultStudents;
+        let expenses = JSON.parse(localStorage.getItem("roomMoneyExpenses")) || defaultExpenses;
+        
+        // โหลดค่าเป้าหมายล่าสุด หรือถ้าไม่มีให้ตั้งเป็น 200
+        let targetAmount = parseFloat(localStorage.getItem("roomMoneyTarget"));
+        if (isNaN(targetAmount) || targetAmount === null) {
+            targetAmount = 200;
+        }
+
+        function handleLogin() {
+            const user = document.getElementById("usernameInput").value.trim();
+            const pass = document.getElementById("passwordInput").value.trim();
+
+            if (user === "MJU69" && pass === "MJUICI69") {
+                isAdmin = true;
+                document.getElementById("loginForm").classList.add("hidden");
+                document.getElementById("adminStatus").classList.remove("hidden");
+                
+                document.getElementById("usernameInput").value = "";
+                document.getElementById("passwordInput").value = "";
+                
+                updateUI();
+            } else {
+                alert("Username หรือ Password ไม่ถูกต้องครับ!");
+            }
+        }
+
+        function handleLogout() {
+            isAdmin = false;
+            document.getElementById("loginForm").classList.remove("hidden");
+            document.getElementById("adminStatus").classList.add("hidden");
+            updateUI();
+        }
+
+        function sortStudents() {
+            students.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: 'base' }));
+        }
+
+        function saveData() {
+            sortStudents();
+            localStorage.setItem("roomMoneyStudents", JSON.stringify(students));
+            localStorage.setItem("roomMoneyExpenses", JSON.stringify(expenses));
+            localStorage.setItem("roomMoneyTarget", targetAmount);
+        }
+
+        // 🌟 แยกฟังก์ชันบันทึกยอดเงินที่กำหนด/คน เมื่อ Admin มีการขยับเปลี่ยนตัวเลข 🌟
+        function saveTargetAmount() {
+            if (!isAdmin) return;
+            const targetInput = document.getElementById("targetAmountInput");
+            if (targetInput) {
+                targetAmount = parseFloat(targetInput.value);
+                if (isNaN(targetAmount) || targetAmount < 0) {
+                    targetAmount = 0;
+                }
+                localStorage.setItem("roomMoneyTarget", targetAmount);
+                calculateMoney();
+                renderStudentTable();
+            }
+        }
+
+        function calculateMoney() {
+            let totalIncome = students.reduce((sum, std) => std.amount >= targetAmount ? sum + std.amount : sum, 0);
+            let totalExpense = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+            let balance = totalIncome - totalExpense;
+
+            document.getElementById("totalIncome").innerText = totalIncome.toLocaleString();
+            document.getElementById("totalExpense").innerText = totalExpense.toLocaleString();
+            document.getElementById("balance").innerText = balance.toLocaleString();
+        }
+
+        function renderStudentTable() {
+            sortStudents();
+            const tbody = document.getElementById("studentTableBody");
+            tbody.innerHTML = "";
+
+            if (students.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-400">ไม่มีข้อมูลรายชื่อนักศึกษา</td></tr>`;
+                return;
+            }
+
+            students.forEach((student, index) => {
+                const isPaidFull = student.amount >= targetAmount;
+
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td class="py-3 font-mono">${student.id}</td>
+                    <td class="py-3">${student.name}</td>
+                    <td class="py-3 text-right font-medium">${student.amount.toLocaleString()} บาท</td>
+                    <td class="py-3 text-center">
+                        <span class="px-2 py-1 rounded-full text-xs font-medium ${isPaidFull ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                            ${isPaidFull ? 'จ่ายครบแล้ว' : 'ยังไม่ครบ'}
+                        </span>
+                    </td>
+                    <td class="py-3 text-center space-x-1 admin-element ${isAdmin ? '' : 'hidden'}">
+                        <button onclick="togglePaidStatus(${index})" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded border border-slate-300 transition cursor-pointer">
+                            สลับสถานะ
+                        </button>
+                        <button onclick="resetStudentMoney(${index})" title="รีเซ็ตยอดเงินของคนนี้" class="text-xs bg-amber-50 hover:bg-amber-100 text-amber-700 px-2 py-1 rounded border border-amber-200 transition cursor-pointer">
+                            🔄 รีเซ็ตเงิน
+                        </button>
+                        <button onclick="deleteStudent(${index})" class="text-xs bg-rose-50 hover:bg-rose-100 text-rose-600 px-2 py-1 rounded border border-rose-200 transition cursor-pointer">
+                            🗑️ ลบชื่อ
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderExpenseTable() {
+            const tbody = document.getElementById("expenseTableBody");
+            tbody.innerHTML = "";
+
+            if (expenses.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="py-4 text-center text-slate-400">ยังไม่มีประวัติการใช้เงิน</td></tr>`;
+                return;
+            }
+
+            expenses.forEach((exp, index) => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td class="py-3">${exp.desc}</td>
+                    <td class="py-3 text-right font-medium text-rose-600">-${exp.amount.toLocaleString()} บาท</td>
+                    <td class="py-3 text-center admin-element ${isAdmin ? '' : 'hidden'}">
+                        <button onclick="deleteExpense(${index})" class="text-xs text-rose-500 hover:text-rose-700 font-medium cursor-pointer">
+                            🗑️
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function addNewStudent() {
+            if (!isAdmin) return;
+            const id = document.getElementById("newStudentId").value.trim();
+            const name = document.getElementById("newStudentName").value.trim();
+
+            if (!id || !name) {
+                alert("กรุณากรอกรหัสนักศึกษาและชื่อเพื่อนให้ครบถ้วนครับ");
+                return;
+            }
+
+            if (students.some(std => std.id === id)) {
+                alert("รหัสนักศึกษานี้มีอยู่ในระบบแล้ว!");
+                return;
+            }
+
+            students.push({ id: id, name: name, amount: 0, paid: false });
+            
+            document.getElementById("newStudentId").value = "69041083";
+            document.getElementById("newStudentName").value = "";
+            updateUI();
+        }
+
+        function deleteStudent(index) {
+            if (!isAdmin) return;
+            if (confirm(`คุณแน่ใจหรือไม่ที่จะลบรายชื่อ "${students[index].name}" ออกจากระบบ?`)) {
+                students.splice(index, 1);
+                updateUI();
+            }
+        }
+
+        function resetStudentMoney(index) {
+            if (!isAdmin) return;
+            if (confirm(`คุณต้องการรีเซ็ตยอดเงินของ "${students[index].name}" ให้เป็น 0 บาทใช่หรือไม่?`)) {
+                students[index].amount = 0;
+                students[index].paid = false;
+                updateUI();
+            }
+        }
+
+        function addOrUpdateStudentMoney() {
+            if (!isAdmin) return;
+            const idInput = document.getElementById("studentIdInput").value.trim();
+            const amountInput = parseFloat(document.getElementById("studentAmountInput").value);
+
+            if (!idInput || isNaN(amountInput) || amountInput < 0) {
+                alert("กรุณากรอกรหัสนักศึกษาและจำนวนเงินให้ถูกต้องครับ");
+                return;
+            }
+
+            const student = students.find(std => std.id === idInput);
+
+            if (student) {
+                student.amount += amountInput;
+                student.paid = student.amount >= targetAmount;
+                
+                document.getElementById("studentIdInput").value = "69041083";
+                document.getElementById("studentAmountInput").value = "";
+                updateUI();
+            } else {
+                alert("ไม่พบรหัสนักศึกษานี้ในระบบ!");
+            }
+        }
+
+        function togglePaidStatus(index) {
+            if (!isAdmin) return;
+            if (students[index].amount < targetAmount) {
+                students[index].amount = targetAmount;
+                students[index].paid = true;
+            } else {
+                students[index].amount = 0;
+                students[index].paid = false;
+            }
+            updateUI();
+        }
+
+        function addExpense() {
+            if (!isAdmin) return;
+            const descInput = document.getElementById("expenseDescInput").value.trim();
+            const amountInput = parseFloat(document.getElementById("expenseAmountInput").value);
+
+            if (!descInput || isNaN(amountInput) || amountInput <= 0) {
+                alert("กรุณากรอกรายละเอียดและจำนวนเงินที่ใช้ให้ถูกต้องครับ");
+                return;
+            }
+
+            expenses.push({ desc: descInput, amount: amountInput });
+            document.getElementById("expenseDescInput").value = "";
+            document.getElementById("expenseAmountInput").value = "";
+            updateUI();
+        }
+
+        function deleteExpense(index) {
+            if (!isAdmin) return;
+            if (confirm(`คุณแน่ใจหรือไม่ที่จะลบรายการใช้เงิน "${expenses[index].desc}" นี้?`)) {
+                expenses.splice(index, 1);
+                updateUI();
+            }
+        }
+
+        function updateUI() {
+            const targetInput = document.getElementById("targetAmountInput");
+            
+            if (targetInput) {
+                if (isAdmin) {
+                    targetInput.removeAttribute("disabled");
+                    targetInput.className = "w-20 bg-white text-blue-600 border border-slate-300 rounded-md p-1 text-xs text-center font-bold focus:outline-none focus:ring-1 focus:ring-blue-500";
+                    // ปรับแก้ไข: ให้อ่านค่าจาก Input เฉพาะตอนเป็น Admin ป้องกันค่าโดนรีเซ็ตเด้งกลับ
+                    if(targetInput.value !== "") {
+                        targetAmount = parseFloat(targetInput.value) || 0;
+                    }
+                } else {
+                    targetInput.setAttribute("disabled", "true");
+                    targetInput.className = "w-20 bg-slate-200 text-slate-500 border border-slate-300 rounded-md p-1 text-xs text-center font-bold focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-70";
+                    targetInput.value = targetAmount; // บุคคลทั่วไปจะเห็นยอดล่าสุดที่ Admin บันทึกไว้เสมอ
+                }
+            }
+
+            if (isAdmin) {
+                document.getElementById("adminActionsZone").classList.remove("hidden");
+                document.getElementById("expenseFormZone").classList.remove("hidden");
+                document.querySelectorAll(".admin-element").forEach(el => el.classList.remove("hidden"));
+            } else {
+                document.getElementById("adminActionsZone").classList.add("hidden");
+                document.getElementById("expenseFormZone").classList.add("hidden");
+                document.querySelectorAll(".admin-element").forEach(el => el.classList.add("hidden"));
+            }
+
+            saveData();
+            calculateMoney();
+            renderStudentTable();
+            renderExpenseTable();
+        }
+
+        // ตั้งค่าตัวเลขให้แสดงผลตรงช่อง Input ในครั้งแรกที่เปิดเว็บ
+        document.getElementById("targetAmountInput").value = targetAmount;
+        updateUI();
+    </script>
+</body>
+</html>
